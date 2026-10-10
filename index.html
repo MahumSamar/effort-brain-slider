@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Effort Brain Slider</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; background: #111111; }
+
+  .effort-section {
+    /* 1 design pixel. The card is drawn on a 440px grid and scales down on narrow screens. */
+    --u: min(1px, calc((100vw - 32px) / 440));
+    --i: 0; /* active stop, 0–5 */
+
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100vh;
+    height: 100svh;
+    min-height: calc(var(--u) * 300);
+    padding: 16px;
+    overflow: hidden;
+    background: #111111;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: #7e7e7e;
+  }
+
+  .effort-card {
+    position: relative;
+    width: calc(var(--u) * 440);
+    padding: calc(var(--u) * 22.5) calc(var(--u) * 22.5) calc(var(--u) * 18.5);
+    background: #191919;
+    border: calc(var(--u) * 1.5) solid #2a2a2a;
+    border-radius: calc(var(--u) * 16);
+    box-shadow:
+      0 calc(var(--u) * 24) calc(var(--u) * 60) rgba(0, 0, 0, 0.45),
+      0 calc(var(--u) * 4) calc(var(--u) * 12) rgba(0, 0, 0, 0.25);
+  }
+
+  /* ---------- Header ---------- */
+  .effort-head {
+    display: flex;
+    align-items: center;
+    height: calc(var(--u) * 36);
+    font-size: calc(var(--u) * 26);
+    line-height: calc(var(--u) * 36);
+  }
+  .effort-head__label { color: #7e7e7e; }
+  .effort-head__value {
+    margin-left: calc(var(--u) * 17);
+    color: #ededed;
+    transition: color 0.3s ease;
+  }
+  .effort-head__value.is-swapping { animation: value-in 0.28s ease; }
+  @keyframes value-in {
+    from { opacity: 0; transform: translateY(calc(var(--u) * 4)); filter: blur(calc(var(--u) * 3)); }
+    to   { opacity: 1; transform: none; filter: none; }
+  }
+  .is-galaxy .effort-head__value { color: #a3d6ff; }
+
+  .effort-help {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--u) * 24);
+    height: calc(var(--u) * 24);
+    margin-left: auto;
+    margin-right: calc(var(--u) * 4);
+    background: none;
+    border: 0;
+    color: #8a8a8a;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .effort-help:hover { color: #c4c4c4; }
+  .effort-help svg { display: block; width: 100%; height: 100%; }
+
+  /* ---------- Faster / Smarter ---------- */
+  .effort-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: calc(var(--u) * 34);
+    font-size: calc(var(--u) * 24);
+    line-height: calc(var(--u) * 36);
+    color: #7e7e7e;
+  }
+
+  /* ---------- Track ---------- */
+  .effort-track {
+    position: relative;
+    height: calc(var(--u) * 40);
+    margin-top: calc(var(--u) * 20);
+    border-radius: calc(var(--u) * 10);
+    background: #262626;
+    cursor: pointer;
+    outline: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .effort-track:focus-visible { box-shadow: 0 0 0 calc(var(--u) * 2) rgba(163, 214, 255, 0.5); }
+
+  .effort-track__clip {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+  }
+
+  .effort-fill {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: calc(var(--u) * (16 + 72 * var(--i)));
+    background: linear-gradient(90deg, #33252f 0%, #5c3b58 45%, #7e5294 100%);
+    transition: width 0.42s cubic-bezier(0.3, 1.35, 0.5, 1), opacity 0.3s ease;
+  }
+  .is-galaxy .effort-fill { opacity: 0; }
+
+  .effort-pixels {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .is-galaxy .effort-pixels { opacity: 1; }
+
+  .effort-stop {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--u) * (22 + 69.6 * var(--n)));
+    width: calc(var(--u) * 5.5);
+    height: calc(var(--u) * 5.5);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .effort-stop--recommended {
+    width: calc(var(--u) * 6);
+    height: calc(var(--u) * 20);
+    border-radius: calc(var(--u) * 3);
+    background: rgba(255, 255, 255, 0.36);
+  }
+
+  /* ---------- Brain thumb ---------- */
+  .effort-thumb {
+    position: absolute;
+    top: calc(50% + var(--u) * 1);
+    left: calc(var(--u) * (16 + 72 * var(--i)));
+    width: calc(var(--u) * 44);
+    height: calc(var(--u) * 44);
+    transform: translate(-50%, -50%);
+    transition: left 0.42s cubic-bezier(0.3, 1.35, 0.5, 1);
+    pointer-events: none;
+  }
+  .effort-thumb__brain {
+    /* the source PNG has a transparent margin, so it is drawn oversized to make the brain itself 44px */
+    display: block;
+    width: 150%;
+    height: 150%;
+    margin: -25%;
+    max-width: none;
+    object-fit: contain;
+    filter:
+      drop-shadow(0 0 calc(var(--u) * 0.9) #5e0f3a)
+      drop-shadow(0 0 calc(var(--u) * 0.9) #5e0f3a)
+      drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 5) rgba(0, 0, 0, 0.35));
+    transition: transform 0.4s cubic-bezier(0.3, 1.5, 0.5, 1), filter 0.35s ease;
+    -webkit-user-drag: none;
+  }
+  .is-dragging .effort-thumb__brain { transform: scale(1.08); }
+  .is-galaxy .effort-thumb__brain {
+    transform: scale(1.3);
+    filter:
+      drop-shadow(0 0 calc(var(--u) * 0.9) #5e0f3a)
+      drop-shadow(0 0 calc(var(--u) * 0.9) #5e0f3a)
+      hue-rotate(-72deg) saturate(1.45) brightness(1.08)
+      drop-shadow(0 0 calc(var(--u) * 10) rgba(124, 104, 255, 0.55));
+  }
+  .effort-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--u) * 260);
+    height: calc(var(--u) * 260);
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+    transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.2, 1.2, 0.4, 1);
+    pointer-events: none;
+  }
+  .is-galaxy .effort-burst { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  /* ---------- Recommended ---------- */
+  .effort-note {
+    margin-top: calc(var(--u) * 12);
+    padding-left: calc(var(--u) * 25);
+    font-size: calc(var(--u) * 24);
+    line-height: calc(var(--u) * 36);
+    color: #7e7e7e;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .effort-fill, .effort-thumb, .effort-thumb__brain, .effort-burst, .effort-pixels { transition: none; }
+    .effort-head__value.is-swapping { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<section class="effort-section" id="effort">
+  <div class="effort-card">
+    <div class="effort-head">
+      <span class="effort-head__label">Effort</span>
+      <span class="effort-head__value" id="effortValue" aria-live="polite">Low</span>
+      <button class="effort-help" type="button" aria-label="What is effort?">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="11"/>
+          <path d="M9 9.4a3.1 3.1 0 0 1 6 1c0 2-3 2.3-3 4.1"/>
+          <circle cx="12" cy="17.6" r="0.6" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="effort-scale" aria-hidden="true">
+      <span>Faster</span>
+      <span>Smarter</span>
+    </div>
+
+    <div class="effort-track" id="effortTrack" role="slider" tabindex="0"
+         aria-label="Effort" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0" aria-valuetext="Low">
+      <div class="effort-track__clip">
+        <div class="effort-fill"></div>
+        <canvas class="effort-pixels" id="effortPixels"></canvas>
+        <span class="effort-stop" style="--n:0"></span>
+        <span class="effort-stop effort-stop--recommended" style="--n:1"></span>
+        <span class="effort-stop" style="--n:2"></span>
+        <span class="effort-stop" style="--n:3"></span>
+        <span class="effort-stop" style="--n:4"></span>
+        <span class="effort-stop" style="--n:5"></span>
+      </div>
+      <div class="effort-thumb">
+        <img class="effort-thumb__brain" alt="" draggable="false"
+             src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20261010_070025_06c1b05b-7b48-4b95-a61a-338f7385f81e.png">
+        <canvas class="effort-burst" id="effortBurst"></canvas>
+      </div>
+    </div>
+
+    <div class="effort-note">Recommended</div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var LEVELS = ['Low', 'Medium', 'High', 'Extra', 'Max', 'Galaxy'];
+  var GALAXY = LEVELS.length - 1;
+
+  var section = document.getElementById('effort');
+  var track = document.getElementById('effortTrack');
+  var valueEl = document.getElementById('effortValue');
+  var pixelCanvas = document.getElementById('effortPixels');
+  var burstCanvas = document.getElementById('effortBurst');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var index = 0;
+  var dragging = false;
+
+  /* ---------- Slider state ---------- */
+  function setIndex(next) {
+    next = Math.max(0, Math.min(GALAXY, next));
+    if (next === index) return;
+    index = next;
+    section.style.setProperty('--i', index);
+    section.classList.toggle('is-galaxy', index === GALAXY);
+    track.setAttribute('aria-valuenow', index);
+    track.setAttribute('aria-valuetext', LEVELS[index]);
+    valueEl.textContent = LEVELS[index];
+    valueEl.classList.remove('is-swapping');
+    void valueEl.offsetWidth;
+    valueEl.classList.add('is-swapping');
+    if (index === GALAXY) startGalaxy();
+  }
+
+  function indexFromPointer(e) {
+    var rect = track.getBoundingClientRect();
+    var u = rect.width / 392;
+    return Math.round(((e.clientX - rect.left) / u - 16) / 72);
+  }
+
+  track.addEventListener('pointerdown', function (e) {
+    dragging = true;
+    section.classList.add('is-dragging');
+    track.setPointerCapture(e.pointerId);
+    setIndex(indexFromPointer(e));
+  });
+  track.addEventListener('pointermove', function (e) {
+    if (dragging) setIndex(indexFromPointer(e));
+  });
+  function endDrag() {
+    dragging = false;
+    section.classList.remove('is-dragging');
+  }
+  track.addEventListener('pointerup', endDrag);
+  track.addEventListener('pointercancel', endDrag);
+
+  track.addEventListener('keydown', function (e) {
+    var next = index;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = index + 1;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = index - 1;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = GALAXY;
+    else return;
+    e.preventDefault();
+    setIndex(next);
+  });
+
+  /* ---------- Galaxy: pixel grid inside the track ---------- */
+  var COLS = 49, ROWS = 5, PITCH = 8, CELL = 5;
+  var DIM = ['#2c2850', '#3a2f5e', '#33405f', '#4a2f5a'];
+  var MID = ['#7a5bb8', '#9a5fb0', '#5f8fb5', '#8a78c8', '#b35fb8'];
+  var HOT = ['#e9e4f6', '#d874d6', '#74dcec', '#b79cf2', '#f0eefa', '#8fc8f0'];
+  var cells = [];
+
+  function pick(list) { return list[(Math.random() * list.length) | 0]; }
+
+  function rollCell(col) {
+    var t = col / (COLS - 1);
+    if (Math.random() > 0.2 + 0.78 * Math.pow(t, 0.85)) return null;
+    var r = Math.random();
+    if (r < t * t * 0.95) return { color: pick(HOT), alpha: 0.75 + Math.random() * 0.25 };
+    if (r < 0.25 + t * 0.7) return { color: pick(MID), alpha: 0.45 + t * 0.4 + Math.random() * 0.15 };
+    return { color: pick(DIM), alpha: 0.7 + Math.random() * 0.3 };
+  }
+
+  for (var c = 0; c < COLS; c++) {
+    for (var r = 0; r < ROWS; r++) cells.push(rollCell(c));
+  }
+
+  function sizeCanvas(canvas, designSize) {
+    var rect = canvas.getBoundingClientRect();
+    var w = canvas.offsetWidth, h = canvas.offsetHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    var ctx = canvas.getContext('2d');
+    var s = (w * dpr) / designSize;
+    ctx.setTransform(s, 0, 0, s, 0, 0);
+    return ctx;
+  }
+
+  function drawPixels() {
+    var ctx = sizeCanvas(pixelCanvas, 392);
+    var bg = ctx.createLinearGradient(0, 0, 392, 0);
+    bg.addColorStop(0, '#120b22');
+    bg.addColorStop(0.6, '#190f2c');
+    bg.addColorStop(1, '#2a1c52');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 392, 40);
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      if (!cell) continue;
+      var col = (i / ROWS) | 0, row = i % ROWS;
+      ctx.globalAlpha = cell.alpha;
+      ctx.fillStyle = cell.color;
+      roundRect(ctx, col * PITCH + (PITCH - CELL) / 2, row * PITCH + (PITCH - CELL) / 2, CELL, CELL, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* ---------- Galaxy: dotted burst around the brain ---------- */
+  var BURST = 260, CENTER = BURST / 2;
+  var RAY_COLORS = ['#5fb9b2', '#8d7fd2', '#9d9dae', '#6f8fd6', '#c9c6dc'];
+  var rays = [];
+  for (var k = 0; k < 15; k++) {
+    rays.push({
+      angle: (k / 15) * Math.PI * 2 + (Math.random() - 0.5) * 0.3,
+      length: 62 + Math.random() * 62,
+      size: 2 + Math.random() * 1.4,
+      gap: 6.5 + Math.random() * 2.5,
+      speed: 5 + Math.random() * 7,
+      color: pick(RAY_COLORS)
+    });
+  }
+  var sparks = [];
+  function rollSparks() {
+    sparks = [];
+    for (var n = 0; n < 7; n++) {
+      var a = Math.random() * Math.PI * 2, d = Math.random() * 19;
+      sparks.push({
+        x: CENTER + Math.cos(a) * d + 4,
+        y: CENTER + Math.sin(a) * d,
+        size: 2 + Math.random() * 1.6,
+        color: Math.random() < 0.3 ? '#7fe3f2' : '#f3f0ff',
+        alpha: 0.55 + Math.random() * 0.45
+      });
+    }
+  }
+  rollSparks();
+
+  function drawBurst(time) {
+    var ctx = sizeCanvas(burstCanvas, BURST);
+    ctx.clearRect(0, 0, BURST, BURST);
+
+    var glow = ctx.createRadialGradient(CENTER, CENTER, 14, CENTER, CENTER, 78);
+    glow.addColorStop(0, 'rgba(120, 104, 235, 0.34)');
+    glow.addColorStop(0.55, 'rgba(96, 84, 190, 0.12)');
+    glow.addColorStop(1, 'rgba(96, 84, 190, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, BURST, BURST);
+
+    for (var i = 0; i < rays.length; i++) {
+      var ray = rays[i];
+      var shift = ((time / 1000) * ray.speed) % ray.gap;
+      var cos = Math.cos(ray.angle), sin = Math.sin(ray.angle);
+      ctx.fillStyle = ray.color;
+      for (var d = 36 + shift; d < ray.length; d += ray.gap) {
+        var t = (d - 36) / (ray.length - 36);
+        var size = ray.size * (1 - t * 0.45);
+        ctx.globalAlpha = Math.max(0, (1 - t) * 0.85);
+        ctx.fillRect(CENTER + cos * d - size / 2, CENTER + sin * d - size / 2, size, size);
+      }
+    }
+
+    for (var j = 0; j < sparks.length; j++) {
+      var sp = sparks[j];
+      ctx.globalAlpha = sp.alpha;
+      ctx.fillStyle = sp.color;
+      ctx.fillRect(sp.x - sp.size / 2, sp.y - sp.size / 2, sp.size, sp.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------- Galaxy: animation loop (only runs while active) ---------- */
+  var running = false, lastTwinkle = 0, lastSpark = 0;
+
+  function frame(time) {
+    if (index !== GALAXY) { running = false; return; }
+    if (time - lastTwinkle > 90) {
+      lastTwinkle = time;
+      for (var n = 0; n < 12; n++) {
+        var i = (Math.random() * cells.length) | 0;
+        cells[i] = rollCell((i / ROWS) | 0);
+      }
+      drawPixels();
+    }
+    if (time - lastSpark > 220) { lastSpark = time; rollSparks(); }
+    drawBurst(time);
+    requestAnimationFrame(frame);
+  }
+
+  function startGalaxy() {
+    drawPixels();
+    drawBurst(0);
+    if (reduceMotion || running) return;
+    running = true;
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', function () {
+    if (index === GALAXY) { drawPixels(); drawBurst(performance.now()); }
+  });
+})();
+</script>
+</body>
+</html>
